@@ -21,12 +21,9 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const db = admin.firestore();  // <-- เพิ่มบรรทัดนี้
-
-
+const db = admin.firestore();
 
 const app = express();
-
 
 const port = process.env.PORT || 3000;
 
@@ -84,6 +81,7 @@ app.post('/proxy', async (req, res) => {
     const userRef = db.collection('users').doc(username);
     const userDoc = await userRef.get();
 
+    // ลงทะเบียนผู้ใช้ใหม่
     if (action === 'register') {
       if (!username || !password) return res.json({ success: false, message: 'Missing username or password' });
 
@@ -94,12 +92,12 @@ app.post('/proxy', async (req, res) => {
         token: 0,
         topgm: 0,
         warzone: 0,
-        point: 0
+        point: 0,
       });
       return res.json({ success: true });
     }
 
-    // ถ้าไม่ใช่ register ต้องเจอ user ก่อน
+    // กรณีไม่ใช่ register ต้องเจอผู้ใช้ก่อน
     if (!userDoc.exists) return res.json({ success: false, message: 'ไม่พบผู้ใช้' });
 
     const userData = userDoc.data();
@@ -107,23 +105,12 @@ app.post('/proxy', async (req, res) => {
     // เช็ครหัสผ่าน
     if (userData.password !== password) return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
-    // ถ้า action เป็น login หรือ userinfo ส่งข้อมูล user กลับ
+    // login หรือ userinfo ส่งข้อมูลผู้ใช้กลับไป
     if (action === 'login' || action === 'userinfo') {
       return res.json({ success: true, ...userData });
     }
 
-    // ใส่ action อื่น ๆ ที่จะทำต่อที่นี่ เช่น update point, topgm เป็นต้น
-
-    // ถ้า action ไม่ตรงกับที่รองรับ
-    return res.json({ success: false, message: 'Invalid action' });
-
-  } catch (error) {
-    console.error('Proxy error:', error);
-    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
-  }
-});
-
-
+    // ใช้ point แลก topgm
     if (action === 'usepoint') {
       if (typeof pointChange !== 'number' || typeof topgmChange !== 'number') {
         return res.json({ success: false, message: 'Invalid pointChange or topgmChange' });
@@ -151,6 +138,7 @@ app.post('/proxy', async (req, res) => {
       return res.json({ success: true });
     }
 
+    // อัปเกรดไอเท็ม
     if (action === 'upgrade') {
       const itemName = 'topgm';
       const hasItem = userData[itemName] || 0;
@@ -223,7 +211,7 @@ app.post('/proxy', async (req, res) => {
       await userRef.update({
         token: currentToken,
         warzone: warzone,
-        topgm: topgm
+        topgm: topgm,
       });
 
       await db.collection('logs').add({
@@ -231,12 +219,13 @@ app.post('/proxy', async (req, res) => {
         Username: username,
         Name: name || '',
         Item: itemName,
-        Result: logResult
+        Result: logResult,
       });
 
       return res.json({ success: true, result: logResult, resultMessage });
     }
 
+    // กรณี action ไม่ตรงกับที่รองรับ
     return res.json({ success: false, message: 'Unknown action' });
   } catch (err) {
     console.error(err);
@@ -244,53 +233,6 @@ app.post('/proxy', async (req, res) => {
   }
 });
 
-app.get('/getUpgradeRates', async (req, res) => {
-  try {
-    const snapshot = await db.collection('upgraderates').get();
-    const rates = {};
-    snapshot.forEach(doc => {
-      rates[doc.id] = doc.data();
-    });
-    res.json({ success: true, rates });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: 'Server Error' });
-  }
-});
-
-app.get('/getLogs', adminAuth, async (req, res) => {
-  try {
-    const logsSnapshot = await db.collection('logs').orderBy('Date', 'desc').limit(100).get();
-    const logs = [];
-    logsSnapshot.forEach(doc => {
-      logs.push({ id: doc.id, ...doc.data() });
-    });
-    res.json({ success: true, logs });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: 'Server Error' });
-  }
-});
-
-app.get('/getUserByName', adminAuth, async (req, res) => {
-  try {
-    const name = req.query.name;
-    if (!name) return res.json({ success: false, message: 'Missing name parameter' });
-    const usersSnapshot = await db.collection('users').where('name', '==', name).get();
-    if (usersSnapshot.empty) return res.json({ success: false, message: 'ไม่พบผู้ใช้' });
-
-    const users = [];
-    usersSnapshot.forEach(doc => {
-      users.push({ id: doc.id, ...doc.data() });
-    });
-
-    res.json({ success: true, users });
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: 'Server Error' });
-  }
-});
-
 app.listen(port, () => {
-  console.log(`🔥 Server is running at http://localhost:${port}`);
+  console.log(`Server running on port ${port}`);
 });
