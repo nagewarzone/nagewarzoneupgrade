@@ -27,8 +27,7 @@ const app = express();
 
 
 
-const db = admin.firestore();
-const app = express();
+const db = admin.firestore();;
 const port = process.env.PORT || 3000;
 
 app.use(cors());
