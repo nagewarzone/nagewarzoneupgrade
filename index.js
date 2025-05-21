@@ -14,9 +14,13 @@ const __dirname = path.dirname(__filename);
 // ✅ ใช้ Environment Variable แทนไฟล์ JSON
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
+// แปลง private_key ให้อยู่ในรูปแบบ multiline จริง
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
 
 const app = express();
 
