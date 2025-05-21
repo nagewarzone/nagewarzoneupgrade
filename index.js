@@ -96,13 +96,30 @@ app.post('/proxy', async (req, res) => {
       return res.json({ success: true });
     }
 
+    // ถ้าไม่ใช่ register ต้องเจอ user ก่อน
     if (!userDoc.exists) return res.json({ success: false, message: 'ไม่พบผู้ใช้' });
+
     const userData = userDoc.data();
+
+    // เช็ครหัสผ่าน
     if (userData.password !== password) return res.json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
 
+    // ถ้า action เป็น login หรือ userinfo ส่งข้อมูล user กลับ
     if (action === 'login' || action === 'userinfo') {
       return res.json({ success: true, ...userData });
     }
+
+    // ใส่ action อื่น ๆ ที่จะทำต่อที่นี่ เช่น update point, topgm เป็นต้น
+
+    // ถ้า action ไม่ตรงกับที่รองรับ
+    return res.json({ success: false, message: 'Invalid action' });
+
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+});
+
 
     if (action === 'usepoint') {
       if (typeof pointChange !== 'number' || typeof topgmChange !== 'number') {
