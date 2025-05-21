@@ -5,49 +5,52 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 
+// โหลดตัวแปร .env
 dotenv.config();
 
+// ตรวจสอบและแปลง __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// เช็ค env variable และแปลง JSON
+// ตรวจสอบว่า .env มี FIREBASE_SERVICE_ACCOUNT หรือไม่
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error('Missing FIREBASE_SERVICE_ACCOUNT env variable');
+  throw new Error('❌ Missing FIREBASE_SERVICE_ACCOUNT env variable');
 }
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} catch (error) {
+  throw new Error('❌ Invalid JSON format in FIREBASE_SERVICE_ACCOUNT');
+}
 
-// แก้ไข private_key ให้เป็น multiline จริง
-serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+// แปลง private_key ให้รองรับ multiline จริง ๆ
+if (serviceAccount.private_key) {
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+}
 
-// Initialize Firebase Admin SDK
+// เริ่มต้น Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+// เชื่อมต่อ Firestore
 const db = admin.firestore();
 
+// ตั้งค่า Express app
 const app = express();
-const port = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Route ทดสอบเชื่อม Firebase Firestore
-app.get('/test-firebase', async (req, res) => {
-  try {
-    const snapshot = await db.collection('test').limit(1).get();
-    const docs = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-    res.json({ success: true, docs });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+// เริ่มต้นเซิร์ฟเวอร์
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`🚀 Server is running at http://localhost:${port}`);
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+export { app, db };
+
 
 
 async function sendDiscord(message, embed = null) {
