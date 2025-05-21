@@ -1,18 +1,18 @@
 const express = require('express');  
 const cors = require('cors');
-const admin = require('firebase-admin');
 const path = require('path');
 const fetch = require('node-fetch'); // ใช้ส่งข้อความ Discord webhook
 
+const admin = require('firebase-admin');
 
-// เริ่มต้น Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    project_id: process.env.PROJECT_ID,
+    client_email: process.env.CLIENT_EMAIL,
+    private_key: process.env.PRIVATE_KEY.replace(/\\n/g, '\n'), // 👈 สำคัญมาก!
   }),
 });
+
 
 const db = admin.firestore();
 const app = express();
