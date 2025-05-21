@@ -21,6 +21,9 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
+const db = admin.firestore();  // <-- เพิ่มบรรทัดนี้
+
+
 
 const app = express();
 
