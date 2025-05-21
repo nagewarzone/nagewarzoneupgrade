@@ -1,7 +1,8 @@
 # Node modules
 node_modules/
-firebase-adminsdk
-firebase-adminsdk.json
+# Firebase Admin SDK JSON
+serviceAccountKey.json
+
 
 # Environment variables
 .env
