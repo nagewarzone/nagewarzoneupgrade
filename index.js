@@ -20,14 +20,7 @@ admin.initializeApp({
 
 const app = express();
 
-// ... โค้ดอื่น ๆ เช่น routes, middleware ...
 
-
-// โค้ดอื่น ๆ ...
-
-
-
-const db = admin.firestore();;
 const port = process.env.PORT || 3000;
 
 app.use(cors());
