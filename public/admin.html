@@ -4,23 +4,52 @@
   <meta charset="UTF-8" />
   <title>Admin Panel</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
     input[type="text"], input[type="number"], input[type="password"] {
-      padding: 5px; margin: 5px 0; width: 200px;
+      padding: 5px; margin: 5px 0; width: 200px; border: 1px solid #ccc; border-radius: 3px;
+      box-sizing: border-box;
     }
-    button { padding: 5px 10px; margin: 5px 0; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background-color: #eee; }
+    button {
+      padding: 6px 12px;
+      margin: 5px 0;
+      cursor: pointer;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 3px;
+      transition: background-color 0.3s;
+    }
+    button:hover { background-color: #0056b3; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #eee;
+    }
     .hidden { display: none; }
+    h2, h3 { color: #333; }
+    #loginMsg {
+      margin-top: 10px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
   <h2>Admin Login</h2>
   <div id="loginDiv">
-    <label>Username: <input type="text" id="adminUsername" value="admin" /></label><br />
-    <label>Password: <input type="password" id="adminPassword" /></label><br />
+    <label>Username: <input type="text" id="adminUsername" value="admin" autocomplete="username" /></label><br />
+    <label>Password: <input type="password" id="adminPassword" autocomplete="current-password" /></label><br />
     <button onclick="adminLogin()">Login</button>
     <p id="loginMsg" style="color:red;"></p>
   </div>
@@ -30,7 +59,7 @@
     <button onclick="logout()">Logout</button>
 
     <h3>อัตราการอัปเกรด</h3>
-    <table id="upgradeRatesTable">
+    <table id="upgradeRatesTable" aria-label="ตารางอัตราการอัปเกรด">
       <thead>
         <tr>
           <th>Item Name</th>
@@ -44,7 +73,7 @@
     </table>
 
     <h3>ข้อมูลผู้ใช้</h3>
-    <table id="usersTable">
+    <table id="usersTable" aria-label="ตารางข้อมูลผู้ใช้">
       <thead>
         <tr>
           <th>Username</th>
@@ -77,26 +106,26 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          adminPassword = password;
-          showLoginMsg('');
-          document.getElementById('loginDiv').classList.add('hidden');
-          document.getElementById('panelDiv').classList.remove('hidden');
-          loadUpgradeRates();
-          loadUsers();
-        } else {
-          showLoginMsg(data.message || 'เข้าสู่ระบบล้มเหลว');
-        }
-      })
-      .catch(err => {
-        showLoginMsg('เกิดข้อผิดพลาดในการเชื่อมต่อหรือข้อมูลไม่ถูกต้อง');
-        console.error(err);
-      });
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        adminPassword = password;
+        showLoginMsg('');
+        document.getElementById('loginDiv').classList.add('hidden');
+        document.getElementById('panelDiv').classList.remove('hidden');
+        loadUpgradeRates();
+        loadUsers();
+      } else {
+        showLoginMsg(data.message || 'เข้าสู่ระบบล้มเหลว');
+      }
+    })
+    .catch(err => {
+      showLoginMsg('เกิดข้อผิดพลาดในการเชื่อมต่อหรือข้อมูลไม่ถูกต้อง');
+      console.error(err);
+    });
   }
 
   function showLoginMsg(msg) {
@@ -107,41 +136,47 @@
     adminPassword = '';
     document.getElementById('loginDiv').classList.remove('hidden');
     document.getElementById('panelDiv').classList.add('hidden');
+    clearTables();
+  }
+
+  function clearTables() {
+    document.querySelector('#upgradeRatesTable tbody').innerHTML = '';
+    document.querySelector('#usersTable tbody').innerHTML = '';
   }
 
   function loadUpgradeRates() {
-    fetch('/getUpgradeRates', {  // <-- เปลี่ยน path จาก /admin/getUpgradeRates
+    fetch('/admin/getUpgradeRates', {  // ต้องแก้ path ให้ตรงกับ server
       headers: { 'x-admin-password': adminPassword }
     })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          const tbody = document.querySelector('#upgradeRatesTable tbody');
-          tbody.innerHTML = '';
-          for (const itemName in data.rates) {
-            const rate = data.rates[itemName];
-            const tr = document.createElement('tr');
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const tbody = document.querySelector('#upgradeRatesTable tbody');
+        tbody.innerHTML = '';
+        for (const itemName in data.rates) {
+          const rate = data.rates[itemName];
+          const tr = document.createElement('tr');
 
-            tr.innerHTML = `
-              <td>${itemName}</td>
-              <td><input type="number" min="0" max="1" step="0.01" value="${rate.successRate}" data-field="successRate" /></td>
-              <td><input type="number" min="0" max="1" step="0.01" value="${rate.failRate}" data-field="failRate" /></td>
-              <td><input type="number" min="0" max="1" step="0.01" value="${rate.breakRate}" data-field="breakRate" /></td>
-              <td><button onclick="saveUpgradeRate('${itemName}', this)">Save</button></td>
-            `;
-            tbody.appendChild(tr);
-          }
-        } else {
-          alert('โหลดอัตราการอัปเกรดล้มเหลว');
+          tr.innerHTML = `
+            <td>${escapeHtml(itemName)}</td>
+            <td><input type="number" min="0" max="1" step="0.01" value="${rate.successRate}" data-field="successRate" /></td>
+            <td><input type="number" min="0" max="1" step="0.01" value="${rate.failRate}" data-field="failRate" /></td>
+            <td><input type="number" min="0" max="1" step="0.01" value="${rate.breakRate}" data-field="breakRate" /></td>
+            <td><button onclick="saveUpgradeRate('${escapeQuotes(itemName)}', this)">Save</button></td>
+          `;
+          tbody.appendChild(tr);
         }
-      })
-      .catch(err => {
-        alert('เกิดข้อผิดพลาดในการโหลดอัตราการอัปเกรด');
-        console.error(err);
-      });
+      } else {
+        alert('โหลดอัตราการอัปเกรดล้มเหลว');
+      }
+    })
+    .catch(err => {
+      alert('เกิดข้อผิดพลาดในการโหลดอัตราการอัปเกรด');
+      console.error(err);
+    });
   }
 
   function saveUpgradeRate(itemName, btn) {
@@ -166,56 +201,56 @@
       },
       body: JSON.stringify({ itemName, successRate, failRate, breakRate })
     })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          alert('บันทึกอัตราการอัปเกรดสำเร็จ');
-        } else {
-          alert('บันทึกล้มเหลว: ' + (data.message || ''));
-        }
-      })
-      .catch(err => {
-        alert('เกิดข้อผิดพลาดในการบันทึกอัตราการอัปเกรด');
-        console.error(err);
-      });
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        alert('บันทึกอัตราการอัปเกรดสำเร็จ');
+      } else {
+        alert('บันทึกล้มเหลว: ' + (data.message || ''));
+      }
+    })
+    .catch(err => {
+      alert('เกิดข้อผิดพลาดในการบันทึกอัตราการอัปเกรด');
+      console.error(err);
+    });
   }
 
   function loadUsers() {
-    fetch('/admin/getUsers', {  // ต้องสร้าง API นี้ใน server ด้วย
+    fetch('/admin/getUsers', {
       headers: { 'x-admin-password': adminPassword }
     })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          const tbody = document.querySelector('#usersTable tbody');
-          tbody.innerHTML = '';
-          data.users.forEach(user => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${user.username}</td>
-              <td><input type="text" value="${user.password || ''}" data-field="password" /></td>
-              <td><input type="number" min="0" value="${user.token || 0}" data-field="token" /></td>
-              <td><input type="number" min="0" value="${user.point || 0}" data-field="point" /></td>
-              <td><input type="number" min="0" value="${user.topgm || 0}" data-field="topgm" /></td>
-              <td><input type="number" min="0" value="${user.warzone || 0}" data-field="warzone" /></td>
-              <td><button onclick="saveUser('${user.username}', this)">Save</button></td>
-            `;
-            tbody.appendChild(tr);
-          });
-        } else {
-          alert('โหลดข้อมูลผู้ใช้ล้มเหลว');
-        }
-      })
-      .catch(err => {
-        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้');
-        console.error(err);
-      });
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const tbody = document.querySelector('#usersTable tbody');
+        tbody.innerHTML = '';
+        data.users.forEach(user => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${escapeHtml(user.username)}</td>
+            <td><input type="text" value="${escapeHtml(user.password || '')}" data-field="password" /></td>
+            <td><input type="number" min="0" value="${user.token || 0}" data-field="token" /></td>
+            <td><input type="number" min="0" value="${user.point || 0}" data-field="point" /></td>
+            <td><input type="number" min="0" value="${user.topgm || 0}" data-field="topgm" /></td>
+            <td><input type="number" min="0" value="${user.warzone || 0}" data-field="warzone" /></td>
+            <td><button onclick="saveUser('${escapeQuotes(user.username)}', this)">Save</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        alert('โหลดข้อมูลผู้ใช้ล้มเหลว');
+      }
+    })
+    .catch(err => {
+      alert('เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้');
+      console.error(err);
+    });
   }
 
   function saveUser(username, btn) {
@@ -239,21 +274,40 @@
       },
       body: JSON.stringify({ username, fields })
     })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          alert(`บันทึกข้อมูลผู้ใช้ ${username} สำเร็จ`);
-        } else {
-          alert('บันทึกข้อมูลผู้ใช้ล้มเหลว: ' + (data.message || ''));
-        }
-      })
-      .catch(err => {
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้');
-        console.error(err);
-      });
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data.success) {
+        alert(`บันทึกข้อมูลผู้ใช้ ${username} สำเร็จ`);
+      } else {
+        alert('บันทึกข้อมูลผู้ใช้ล้มเหลว: ' + (data.message || ''));
+      }
+    })
+    .catch(err => {
+      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้');
+      console.error(err);
+    });
+  }
+
+  // ป้องกัน XSS ง่ายๆ
+  function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m];
+    });
+  }
+
+  function escapeQuotes(text) {
+    if (!text) return '';
+    return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
   }
 </script>
 </body>
