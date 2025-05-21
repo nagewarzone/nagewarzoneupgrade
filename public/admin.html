@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input[type="text"], input[type="number"], input[type="password"] {
+      padding: 5px; margin: 5px 0; width: 200px;
+    }
+    button { padding: 5px 10px; margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <h2>Admin Login</h2>
+  <div id="loginDiv">
+    <label>Username: <input type="text" id="adminUsername" value="admin" /></label><br />
+    <label>Password: <input type="password" id="adminPassword" /></label><br />
+    <button onclick="adminLogin()">Login</button>
+    <p id="loginMsg" style="color:red;"></p>
+  </div>
+
+  <div id="panelDiv" class="hidden">
+    <h2>Admin Panel</h2>
+    <button onclick="logout()">Logout</button>
+
+    <h3>อัตราการอัปเกรด</h3>
+    <table id="upgradeRatesTable">
+      <thead>
+        <tr>
+          <th>Item Name</th>
+          <th>Success Rate</th>
+          <th>Fail Rate</th>
+          <th>Break Rate</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>ข้อมูลผู้ใช้</h3>
+    <table id="usersTable">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Password</th>
+          <th>Token</th>
+          <th>Point</th>
+          <th>TopGM</th>
+          <th>Warzone</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+  let adminPassword = '';
+
+  function adminLogin() {
+    const username = document.getElementById('adminUsername').value.trim();
+    const password = document.getElementById('adminPassword').value;
+
+    if (!username || !password) {
+      showLoginMsg('กรุณากรอก username และ password');
+      return;
+    }
+
+    fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.success) {
+          adminPassword = password;
+          showLoginMsg('');
+          document.getElementById('loginDiv').classList.add('hidden');
+          document.getElementById('panelDiv').classList.remove('hidden');
+          loadUpgradeRates();
+          loadUsers();
+        } else {
+          showLoginMsg(data.message || 'เข้าสู่ระบบล้มเหลว');
+        }
+      })
+      .catch(err => {
+        showLoginMsg('เกิดข้อผิดพลาดในการเชื่อมต่อหรือข้อมูลไม่ถูกต้อง');
+        console.error(err);
+      });
+  }
+
+  function showLoginMsg(msg) {
+    document.getElementById('loginMsg').textContent = msg;
+  }
+
+  function logout() {
+    adminPassword = '';
+    document.getElementById('loginDiv').classList.remove('hidden');
+    document.getElementById('panelDiv').classList.add('hidden');
+  }
+
+  function loadUpgradeRates() {
+    fetch('/getUpgradeRates', {  // <-- เปลี่ยน path จาก /admin/getUpgradeRates
+      headers: { 'x-admin-password': adminPassword }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.success) {
+          const tbody = document.querySelector('#upgradeRatesTable tbody');
+          tbody.innerHTML = '';
+          for (const itemName in data.rates) {
+            const rate = data.rates[itemName];
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+              <td>${itemName}</td>
+              <td><input type="number" min="0" max="1" step="0.01" value="${rate.successRate}" data-field="successRate" /></td>
+              <td><input type="number" min="0" max="1" step="0.01" value="${rate.failRate}" data-field="failRate" /></td>
+              <td><input type="number" min="0" max="1" step="0.01" value="${rate.breakRate}" data-field="breakRate" /></td>
+              <td><button onclick="saveUpgradeRate('${itemName}', this)">Save</button></td>
+            `;
+            tbody.appendChild(tr);
+          }
+        } else {
+          alert('โหลดอัตราการอัปเกรดล้มเหลว');
+        }
+      })
+      .catch(err => {
+        alert('เกิดข้อผิดพลาดในการโหลดอัตราการอัปเกรด');
+        console.error(err);
+      });
+  }
+
+  function saveUpgradeRate(itemName, btn) {
+    const tr = btn.closest('tr');
+    const successRate = parseFloat(tr.querySelector('input[data-field="successRate"]').value);
+    const failRate = parseFloat(tr.querySelector('input[data-field="failRate"]').value);
+    const breakRate = parseFloat(tr.querySelector('input[data-field="breakRate"]').value);
+
+    if (
+      successRate < 0 || failRate < 0 || breakRate < 0 ||
+      successRate + failRate + breakRate > 1
+    ) {
+      alert('อัตราอัปเกรดไม่ถูกต้อง ผลรวมต้องไม่เกิน 1 และไม่เป็นลบ');
+      return;
+    }
+
+    fetch('/admin/updateUpgradeRate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-password': adminPassword
+      },
+      body: JSON.stringify({ itemName, successRate, failRate, breakRate })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.success) {
+          alert('บันทึกอัตราการอัปเกรดสำเร็จ');
+        } else {
+          alert('บันทึกล้มเหลว: ' + (data.message || ''));
+        }
+      })
+      .catch(err => {
+        alert('เกิดข้อผิดพลาดในการบันทึกอัตราการอัปเกรด');
+        console.error(err);
+      });
+  }
+
+  function loadUsers() {
+    fetch('/admin/getUsers', {  // ต้องสร้าง API นี้ใน server ด้วย
+      headers: { 'x-admin-password': adminPassword }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.success) {
+          const tbody = document.querySelector('#usersTable tbody');
+          tbody.innerHTML = '';
+          data.users.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${user.username}</td>
+              <td><input type="text" value="${user.password || ''}" data-field="password" /></td>
+              <td><input type="number" min="0" value="${user.token || 0}" data-field="token" /></td>
+              <td><input type="number" min="0" value="${user.point || 0}" data-field="point" /></td>
+              <td><input type="number" min="0" value="${user.topgm || 0}" data-field="topgm" /></td>
+              <td><input type="number" min="0" value="${user.warzone || 0}" data-field="warzone" /></td>
+              <td><button onclick="saveUser('${user.username}', this)">Save</button></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          alert('โหลดข้อมูลผู้ใช้ล้มเหลว');
+        }
+      })
+      .catch(err => {
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้');
+        console.error(err);
+      });
+  }
+
+  function saveUser(username, btn) {
+    const tr = btn.closest('tr');
+    const inputs = tr.querySelectorAll('input[data-field]');
+    const fields = {};
+    inputs.forEach(input => {
+      const key = input.getAttribute('data-field');
+      if (key === 'password') {
+        fields[key] = input.value;
+      } else {
+        fields[key] = Number(input.value);
+      }
+    });
+
+    fetch('/admin/updateUser', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-password': adminPassword
+      },
+      body: JSON.stringify({ username, fields })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data.success) {
+          alert(`บันทึกข้อมูลผู้ใช้ ${username} สำเร็จ`);
+        } else {
+          alert('บันทึกข้อมูลผู้ใช้ล้มเหลว: ' + (data.message || ''));
+        }
+      })
+      .catch(err => {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้');
+        console.error(err);
+      });
+  }
+</script>
+</body>
+</html>
