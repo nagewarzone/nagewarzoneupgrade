@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
@@ -12,13 +11,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf8')
-);
+// ✅ ใช้ Environment Variable แทนไฟล์ JSON
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
+const app = express();
+
+// ... โค้ดอื่น ๆ เช่น routes, middleware ...
+
 
 // โค้ดอื่น ๆ ...
 
