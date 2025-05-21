@@ -1,21 +1,27 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
-import serviceAccount from './serviceAccountKey.json' assert { type: 'json' };
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
+const serviceAccount = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf8')
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
+// โค้ดอื่น ๆ ...
+
 
 
 const db = admin.firestore();
