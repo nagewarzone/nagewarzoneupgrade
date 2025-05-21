@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+firebase-adminsdk
+firebase-adminsdk.json
+
+# Environment variables
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Optional: หากคุณใช้ build tools เช่น webpack
+dist/
+build/
