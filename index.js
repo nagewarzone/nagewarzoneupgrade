@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 
@@ -11,12 +10,17 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ ใช้ Environment Variable แทนไฟล์ JSON
+// เช็ค env variable และแปลง JSON
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  throw new Error('Missing FIREBASE_SERVICE_ACCOUNT env variable');
+}
+
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-// แปลง private_key ให้อยู่ในรูปแบบ multiline จริง
+// แก้ไข private_key ให้เป็น multiline จริง
 serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
 
+// Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -24,12 +28,27 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
-
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Route ทดสอบเชื่อม Firebase Firestore
+app.get('/test-firebase', async (req, res) => {
+  try {
+    const snapshot = await db.collection('test').limit(1).get();
+    const docs = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+    res.json({ success: true, docs });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
+
 
 async function sendDiscord(message, embed = null) {
   const webhookURL = process.env.DISCORD_WEBHOOK_URL;
