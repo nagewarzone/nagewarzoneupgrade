@@ -45,9 +45,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // เริ่มต้นเซิร์ฟเวอร์
 const port = process.env.PORT || 3000;
+
 app.listen(port, () => {
   console.log(`🚀 Server is running at http://localhost:${port}`);
 });
+
 
 export { app, db };
 
@@ -255,6 +257,3 @@ app.post('/proxy', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
