@@ -5,19 +5,18 @@ import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
-
+import serviceAccount from './serviceAccountKey.json' assert { type: 'json' };
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
 admin.initializeApp({
-  credential: admin.credential.cert({
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  }),
+  credential: admin.credential.cert(serviceAccount),
 });
+
 
 const db = admin.firestore();
 const app = express();
