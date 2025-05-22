@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>NAGE WARZONE  CRAFT/UPGRADE ITEMS</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tabs button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; background: #ddd; }
+    .tabs button.active { background: #007BFF; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    input, button[type="submit"] { padding: 10px; width: 100%; margin-bottom: 10px; }
+    button[type="submit"] { background: #007BFF; color: white; border: none; cursor: pointer; }
+    p { white-space: pre-line; }
+    #logoutBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 12px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<h2>N-AGE WARZONE  CRAFT&UPGRADE ITEMS</h2>
+
+<div class="tabs">
+  <button id="btnRegister">สมัครสมาชิก</button>
+  <button id="btnLogin" class="active">เข้าสู่ระบบ</button>
+  <button id="btnUpgrade" style="display:none;">อัพเกรดไอเท็ม</button>
+</div>
+
+<!-- ปุ่ม Logout -->
+<button id="logoutBtn">ออกจากระบบ</button>
+
+<!-- แสดง Token, TOPGM, Warzone -->
+<div id="userStats" style="display:none; margin-bottom: 15px;">
+  <strong>PEMTO:</strong> <span id="tokenCount">-</span> |
+  <strong>ปลอก TOPGM:</strong> <span id="topgmCount">-</span> |
+  <strong>โล่ Warzone:</strong> <span id="warzoneCount">-</span> |
+  <strong>POINT:</strong> <span id="POINT">-</span>
+  <button id="btnAddTopgm" style="margin-left:10px; padding:3px 8px; font-size:14px; cursor:pointer;">+1 TOPGM (50 POINT)</button>
+</div>
+
+<div id="register" class="tab-content">
+  <form id="registerForm">
+    <input type="text" id="regUsername" placeholder="Username" required autocomplete="username" />
+    <input type="password" id="regPassword" placeholder="Password" required autocomplete="new-password" />
+    <input type="password" id="regConfirmPassword" placeholder="ยืนยันรหัสผ่าน" required autocomplete="new-password" />
+    <button type="submit">สมัครสมาชิก</button>
+    <p id="registerResult"></p>
+  </form>
+</div>
+
+<div id="login" class="tab-content active">
+  <form id="loginForm">
+    <input type="text" id="loginUsername" placeholder="Username" required autocomplete="username" />
+    <input type="password" id="loginPassword" placeholder="Password" required autocomplete="current-password" />
+    <button type="submit">เข้าสู่ระบบ</button>
+    <p id="loginResult"></p>
+  </form>
+</div>
+
+<div id="upgrade" class="tab-content">
+  <form id="upgradeForm">
+    <input type="text" id="upgradeName" placeholder="ชื่อตัวละคร" required autocomplete="off" />
+    <button type="submit" id="upgradeButton">อัพเกรดไอเท็ม</button>
+    <p id="upgradeResult"></p>
+  </form>
+</div>
+
+<script>
+  const apiURL = 'https://testupgrade.onrender.com/proxy';
+  let loggedInUser = null;
+  let loggedInPass = null;
+
+  // ฟังก์ชันเปลี่ยนแท็บ
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btnRegister').classList.remove('active');
+    document.getElementById('btnLogin').classList.remove('active');
+    document.getElementById('btnUpgrade').classList.remove('active');
+
+    if (tabName === 'register') document.getElementById('btnRegister').classList.add('active');
+    else if (tabName === 'login') document.getElementById('btnLogin').classList.add('active');
+    else if (tabName === 'upgrade') document.getElementById('btnUpgrade').classList.add('active');
+  }
+
+  document.getElementById('btnRegister').onclick = () => switchTab('register');
+  document.getElementById('btnLogin').onclick = () => switchTab('login');
+  document.getElementById('btnUpgrade').onclick = () => switchTab('upgrade');
+
+  document.getElementById('logoutBtn').onclick = () => {
+    localStorage.removeItem('username');
+    localStorage.removeItem('password');
+    loggedInUser = null;
+    loggedInPass = null;
+    document.getElementById('userStats').style.display = 'none';
+    document.getElementById('btnUpgrade').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+    switchTab('login');
+  };
+
+  async function loadUserStats() {
+    const res = await fetch(apiURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'userinfo', username: loggedInUser, password: loggedInPass })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('tokenCount').textContent = data.token;
+      document.getElementById('topgmCount').textContent = data.topgm;
+      document.getElementById('warzoneCount').textContent = data.warzone;
+      document.getElementById('POINT').textContent = data.point || 0;
+      document.getElementById('userStats').style.display = 'block';
+    }
+  }
+
+  // โหลดผู้ใช้จาก localStorage ถ้ามี
+  window.addEventListener('DOMContentLoaded', async () => {
+    const user = localStorage.getItem('username');
+    const pass = localStorage.getItem('password');
+    if (user && pass) {
+      loggedInUser = user;
+      loggedInPass = pass;
+      document.getElementById('btnUpgrade').style.display = 'inline-block';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      switchTab('upgrade');
+      await loadUserStats();
+    }
+  });
+
+  // ฟอร์มล็อกอิน
+  document.getElementById('loginForm').onsubmit = async e => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const resultP = document.getElementById('loginResult');
+
+    const res = await fetch(apiURL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'login', username, password })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      loggedInUser = username;
+      loggedInPass = password;
+      localStorage.setItem('username', username);
+      localStorage.setItem('password', password);
+      resultP.style.color = 'green';
+      resultP.textContent = 'เข้าสู่ระบบสำเร็จ!';
+      document.getElementById('btnUpgrade').style.display = 'inline-block';
+      document.getElementById('logoutBtn').style.display = 'inline-block';
+      switchTab('upgrade');
+      await loadUserStats();
+    } else {
+      resultP.style.color = 'red';
+      resultP.textContent = data.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    }
+  };
+
+  // ฟอร์มสมัครสมาชิก
+  document.getElementById('registerForm').onsubmit = async e => {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    const password = document.getElementById('regPassword').value;
+    const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const resultP = document.getElementById('registerResult');
+
+    if (password !== confirmPassword) {
+      resultP.style.color = 'red';
+      resultP.textContent = 'รหัสผ่านไม่ตรงกัน';
+      return;
+    }
+
+    const res = await fetch(apiURL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'register', username, password })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      resultP.style.color = 'green';
+      resultP.textContent = 'สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ';
+      // ล้างฟอร์ม
+      document.getElementById('registerForm').reset();
+      switchTab('login');
+    } else {
+      resultP.style.color = 'red';
+      resultP.textContent = data.message || 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+    }
+  };
+
+  // ฟังก์ชันแสดงแจ้งเตือนอัพเกรด
+  function showUpgradeNotification(message, color) {
+    const notify = document.createElement('div');
+    notify.textContent = message;
+    notify.style.position = 'fixed';
+    notify.style.top = '10px';
+    notify.style.left = '50%';
+    notify.style.transform = 'translateX(-50%)';
+    notify.style.backgroundColor = color;
+    notify.style.color = 'white';
+    notify.style.padding = '10px 20px';
+    notify.style.borderRadius = '8px';
+    notify.style.fontWeight = 'bold';
+    notify.style.zIndex = 9999;
+    document.body.appendChild(notify);
+    setTimeout(() => document.body.removeChild(notify), 5000);
+  }
+
+  // ฟอร์มอัพเกรดไอเท็ม
+  document.getElementById('upgradeForm').onsubmit = async e => {
+    e.preventDefault();
+
+    const name = document.getElementById('upgradeName').value.trim();
+    const resultP = document.getElementById('upgradeResult');
+    const upgradeButton = document.getElementById('upgradeButton');
+    const originalButtonText = upgradeButton.textContent;
+
+    if (!name) {
+      alert('กรุณากรอกชื่อตัวละครก่อน');
+      return;
+    }
+    if (!loggedInUser || !loggedInPass) {
+      alert('กรุณาเข้าสู่ระบบก่อน');
+      switchTab('login');
+      return;
+    }
+
+    // แสดงสถานะกำลังทำงาน
+    upgradeButton.textContent = 'กำลังรวมอุปกรณ์...';
+    upgradeButton.disabled = true;
+
+    resultP.innerHTML = `
+      <div style="text-align: center;">
+        <img src="https://img2.pic.in.th/pic/image_2025-05-21_180926572.png" 
+             alt="กำลังอัปเกรด" 
+             style="width: 400px; margin-top: 10px;">
+      </div>
+    `;
+
+    // รอ 3 วินาที (จำลองเวลาทำงาน)
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // เรียก API อัพเกรด
+    const res = await fetch(apiURL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ action: 'upgrade', username: loggedInUser, password: loggedInPass, name })
+  });
+
+  const data = await res.json();
+
+ if (data.success) {
+  const params = new URLSearchParams();
+  params.append('name', name);      // ชื่อที่ได้จาก input
+  params.append('result', data.result);
+
+
+  fetch('https://script.google.com/macros/s/AKfycbwdks2ahbN1djbJGkmI5QCvdshmzcEFxWWTrffZNiXHxAK2ZtDo7H7bnxOsGMUIKTFM/exec', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  })
+  .then(res => res.json())
+  .then(data => console.log('Discord ส่งแล้ว:', data))
+  .catch(err => console.error('ส่ง Discord ไม่ได้:', err));
+
+  // --- แสดงผล UI ---
+  let color, message, imageURL;
+  switch(data.result) {
+    case "สำเร็จ":
+      color = 'darkgreen';
+      message = 'อัปเกรดสำเร็จ! 🎉 คุณได้รับไอเท็มใหม่แล้ว';
+      imageURL = 'https://img2.pic.in.th/pic/Screenshot-2025-05-21-023115.png';
+      break;
+    case "ล้มเหลว":
+      color = '#cc6600';
+      message = 'อัปเกรดล้มเหลว! ขอให้โชคดีครั้งหน้า';
+      imageURL = 'https://img5.pic.in.th/file/secure-sv1/18a5fd9683439dec252c4ed8898ad9c4.png';
+      break;
+    case "แตก":
+      color = 'red';
+      message = 'ไอเท็มถูกทำลาย !!';
+      imageURL = 'https://img2.pic.in.th/pic/Screenshot-2025-05-21-023244.png';
+      break;
+    default:
+      color = 'blue';
+      message = data.result;
+      imageURL = '';
+  }
+
+  const resultP = document.getElementById('upgradeResult');
+  resultP.style.color = color;
+  resultP.style.textAlign = 'center';
+  resultP.innerHTML = imageURL 
+    ? `<img src="${imageURL}" alt="${data.result}" style="width: 400px; margin-top: 10px;">`
+    : '';
+
+  showUpgradeNotification(message, color);
+  await loadUserStats(); // ✅ ต้องอยู่ใน async function
+}
+
+
+
+   else {
+    resultP.style.color = 'red';
+    resultP.style.textAlign = 'left';
+    resultP.textContent = data.message || 'เกิดข้อผิดพลาดในการอัปเกรด';
+  }
+
+  // คืนค่าปุ่มเดิม
+  upgradeButton.textContent = originalButtonText;
+  upgradeButton.disabled = false;
+};
+
+
+
+// แก้ฟังก์ชันแจ้งเตือนให้รับสีด้วย
+function showUpgradeNotification(message, color = '#155724') {
+  let notifyDiv = document.getElementById('upgradeNotification');
+  const resultP = document.getElementById('upgradeResult');
+  
+  if (!notifyDiv) {
+    notifyDiv = document.createElement('div');
+    notifyDiv.id = 'upgradeNotification';
+    notifyDiv.style.padding = '15px 25px';
+    notifyDiv.style.borderRadius = '10px';
+    notifyDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    notifyDiv.style.zIndex = '1000';
+    notifyDiv.style.textAlign = 'center';
+    notifyDiv.style.maxWidth = '320px';
+    notifyDiv.style.whiteSpace = 'normal';
+    notifyDiv.style.wordWrap = 'break-word';
+    notifyDiv.style.margin = '10px auto 0 auto';  // เว้นระยะบน และกลางจอแนวนอน
+    // แทรกไว้ใต้ resultP
+    resultP.parentNode.insertBefore(notifyDiv, resultP.nextSibling);
+  }
+
+  notifyDiv.innerHTML = '';
+
+  if (color === 'darkgreen') {
+    const img = document.createElement('img');
+    img.src = 'https://img5.pic.in.th/file/secure-sv1/image_2025-05-21_025140493-removebg-preview.png';
+    img.alt = 'สำเร็จ';
+    img.style.width = '200px';
+    img.style.height = '200px';
+    img.style.display = 'block';
+    img.style.margin = '0 auto 10px auto';
+    notifyDiv.appendChild(img);
+  }
+
+  const textNode = document.createElement('div');
+  textNode.textContent = message;
+  notifyDiv.appendChild(textNode);
+
+  if (color === 'darkgreen') {
+    notifyDiv.style.backgroundColor = '#d4edda';
+    notifyDiv.style.color = '#155724';
+    notifyDiv.style.border = '1px solid #c3e6cb';
+  } else if (color === '#cc6600') {
+    notifyDiv.style.backgroundColor = '#ffdb99';
+    notifyDiv.style.color = '#b35900';
+    notifyDiv.style.border = '1px solid #d18c1a';
+  } else if (color === 'red') {
+    notifyDiv.style.backgroundColor = '#f8d7da';
+    notifyDiv.style.color = '#721c24';
+    notifyDiv.style.border = '1px solid #f5c6cb';
+  } else if (color === 'blue') {
+    notifyDiv.style.backgroundColor = '#cce5ff';
+    notifyDiv.style.color = '#004085';
+    notifyDiv.style.border = '1px solid #b8daff';
+  } else {
+    notifyDiv.style.backgroundColor = '#d4edda';
+    notifyDiv.style.color = '#155724';
+    notifyDiv.style.border = '1px solid #c3e6cb';
+  }
+
+  setTimeout(() => {
+    if (notifyDiv) notifyDiv.remove();
+  }, 10000);
+}
+
+  // ปุ่มเพิ่ม TOPGM โดยใช้ 50 POINT
+  document.getElementById('btnAddTopgm').onclick = async () => {
+  const name = document.getElementById('upgradeName').value.trim();
+  if (!name) {
+    alert('กรุณากรอกชื่อตัวละครก่อน');
+    return;
+  }
+
+  if (!confirm('ต้องการใช้ POINT 50 เพื่อเพิ่ม TOPGM +1 ใช่หรือไม่?')) return;
+
+  const res = await fetch(apiURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'usepoint',
+      username: loggedInUser,
+      password: loggedInPass,
+      name, // เพิ่มตรงนี้
+      pointChange: -50,
+      topgmChange: 1
+    })
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    alert('เพิ่ม TOPGM +1 และหัก POINT 50 เรียบร้อยแล้ว');
+    await loadUserStats();
+  } else {
+    alert('ไม่สามารถเพิ่ม TOPGM ได้: ' + (data.message || 'POINT อาจไม่เพียงพอ'));
+  }
+};
+
+
+</script>
+
+</body>
+</html>
